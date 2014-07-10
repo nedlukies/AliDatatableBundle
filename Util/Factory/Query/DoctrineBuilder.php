@@ -54,6 +54,12 @@ class DoctrineBuilder implements QueryInterface
     /** @var boolean */
     protected $search = FALSE;
 
+    /** @var boolean */
+    protected $global_search = FALSE;
+    
+    /** @var array */
+    protected $global_search_fields = array();
+    
     /**
      * class constructor 
      * 
@@ -89,6 +95,28 @@ class DoctrineBuilder implements QueryInterface
                     $queryBuilder->andWhere(" $search_field like '%{$request->get("sSearch_{$i}")}%' ");
                 }
             }
+        }
+        
+        if ($this->global_search == TRUE)
+        {
+            $request       = $this->request;
+            $search_param = $request->get("sSearch");
+            $search_fields = array_values($this->fields);
+          
+            if ($search_param)
+            {
+                $where = $queryBuilder->expr()->orX();
+                
+                
+                foreach ($this->global_search_fields as $field) {
+                    $where->add($queryBuilder->expr()->like($search_fields[$field], "'%$search_param%'"));
+                }
+               
+                
+                $queryBuilder->andWhere($where);
+                
+            }
+            
         }
     }
 
@@ -378,6 +406,31 @@ class DoctrineBuilder implements QueryInterface
     public function setSearch($search)
     {
         $this->search = $search;
+        return $this;
+    }
+    
+    
+    /**
+     * set global search
+     * 
+     * @param bool $search
+     * 
+     * @return Datatable
+     */
+    public function setGlobalSearch($global_search)
+    {
+        $this->global_search = $global_search;
+        return $this;
+    }
+    
+
+    /**
+     * 
+     * @param array $global_search_fields
+     * @return \Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder
+     */
+    public function setGlobalSearchFields($global_search_fields) {
+        $this->global_search_fields = $global_search_fields;
         return $this;
     }
 

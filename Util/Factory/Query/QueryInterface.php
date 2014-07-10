@@ -114,6 +114,23 @@ interface QueryInterface
     function setSearch($search); 
 
     /**
+     * set search
+     *
+     * @param bool $global_search
+     *
+     * @return Datatable
+     */
+    function setGlobalSearch($global_search); 
+    
+    
+    /**
+     * 
+     * @param array $global_search_fields
+     * @return Datatable
+     */
+    function setGlobalSearchFields($global_search_fields);
+    
+    /**
      * add join
      * 
      * @example:

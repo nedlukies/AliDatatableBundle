@@ -55,6 +55,12 @@ class Datatable
 
     /** @var array */
     protected $_search_fields = array();
+    
+    /** @var boolean */
+    protected $_global_search;
+            
+    /** @var array */
+    protected $_global_search_fields = array();
 
     /** @var array */
     protected static $_instances = array();
@@ -578,6 +584,54 @@ class Datatable
     public function setSearchFields(array $search_fields)
     {
         $this->_search_fields = $search_fields;
+        return $this;
+    }
+    
+    
+    /**
+     * 
+     * @param bool $search
+     * @return \Ali\DatatableBundle\Util\Datatable
+     */
+    public function setGlobalSearch($search) {
+        $this->_global_search = $search;
+        $this->_queryBuilder->setGlobalSearch($search);
+        return $this;
+        
+    }
+    
+    /**
+     * @return bool
+     */
+    public function getGlobalSearch() {
+        return $this->_global_search;
+    }
+    
+    /**
+     * get search field
+     * 
+     * @return array
+     */
+    public function getGlobalSearchFields()
+    {
+        return $this->_global_search_fields;
+    }
+
+    /**
+     * set search fields
+     * 
+     * @example 
+     * 
+     *      ->setSearchFields(array(0,2,5))
+     * 
+     * @param array $search_fields
+     * 
+     * @return \Ali\DatatableBundle\Util\Datatable
+     */
+    public function setGlobalSearchFields(array $global_search_fields)
+    {
+        $this->_global_search_fields = $global_search_fields;
+        $this->_queryBuilder->setGlobalSearchFields($global_search_fields);
         return $this;
     }
 
