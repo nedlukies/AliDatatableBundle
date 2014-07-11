@@ -60,6 +60,10 @@ class DoctrineBuilder implements QueryInterface
     /** @var array */
     protected $global_search_fields = array();
     
+    /** @var string */
+    
+    protected $group_by = NULL;
+    
     /**
      * class constructor 
      * 
@@ -111,8 +115,7 @@ class DoctrineBuilder implements QueryInterface
                 foreach ($this->global_search_fields as $field) {
                     $where->add($queryBuilder->expr()->like($search_fields[$field], "'%$search_param%'"));
                 }
-               
-                
+
                 $queryBuilder->andWhere($where);
                 
             }
@@ -219,7 +222,9 @@ class DoctrineBuilder implements QueryInterface
         {
             $qb->resetDQLPart('orderBy');
         }
-        $qb->select($this->entity_alias);
+        
+        
+        $qb->select($dql_fields);
         $this->_addSearch($qb);
         $query          = $qb->getQuery();
         $iDisplayLength = (int) $request->get('iDisplayLength');
@@ -227,19 +232,38 @@ class DoctrineBuilder implements QueryInterface
         {
             $query->setMaxResults($iDisplayLength)->setFirstResult($request->get('iDisplayStart'));
         }
+        
         $objects      = $query->getResult(Query::HYDRATE_OBJECT);
         $selectFields = array();
+        
         foreach ($this->fields as $label => $selector)
         {
-            $has_alias      = preg_match_all('~([A-z]?\.[A-z]+)?\sas~', $selector, $matches);
-            $_f             = ( $has_alias > 0 ) ? $matches[1][0] : $selector;
-            $selectFields[] = substr($_f, strpos($_f, '.') + 1);
+            $has_alias      = preg_match_all('~([A-z]?\.[A-z]+)?\sas\s(.*)~', $selector, $matches);
+           
+            
+            if ($has_alias) {
+                $selectFields[] = $matches[2][0];
+            } else {
+                $selectFields[] = substr($selector, strpos($selector, '.') + 1);
+            }
+           
+            
         }
+        
+        
+        
+      
         $data = array();
         foreach ($objects as $object)
         {
             $d   = array();
-            $map = $this->_toArray($object);
+            if (!is_array($object)) {
+                
+                $map = $this->_toArray($object);
+            } else {
+                $map = $object;
+            }
+            
             foreach ($selectFields as $key)
             {
                 $d[] = $map[$key];
@@ -349,6 +373,7 @@ class DoctrineBuilder implements QueryInterface
      */
     public function setOrder($order_field, $order_type)
     {
+        
         $this->order_field = $order_field;
         $this->order_type  = $order_type;
         $this->queryBuilder->orderBy($order_field, $order_type);
