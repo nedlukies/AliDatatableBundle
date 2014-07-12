@@ -62,12 +62,21 @@ class Datatable
     /** @var array */
     protected $_global_search_fields = array();
 
+        /** @var boolean */
+    protected $_date_filter;
+            
+    /** @var array */
+    protected $_date_filter_fields = array();
+    
+    
     /** @var array */
     protected static $_instances = array();
 
     /** @var Datatable */
     protected static $_current_instance = NULL;
 
+    
+    
     /**
      * class constructor 
      * 
@@ -616,7 +625,8 @@ class Datatable
     {
         return $this->_global_search_fields;
     }
-
+    
+    
     /**
      * set search fields
      * 
@@ -635,4 +645,42 @@ class Datatable
         return $this;
     }
 
+    
+    /**
+     * 
+     * @param bool $search
+     * @return \Ali\DatatableBundle\Util\Datatable
+     */
+    public function setDateFilter($date_filter) {
+        $this->_date_filter = $date_filter;
+        $this->_queryBuilder->setDateFilter($date_filter);
+        return $this;
+        
+    }
+    
+    /**
+     * @return bool
+     */
+    public function getDateFilter() {
+        return $this->_date_filter;
+    }
+    
+    /**
+     * get search field
+     * 
+     * @return array
+     */
+    public function getDateFilterFields()
+    {
+        return $this->_date_filter_fields;
+    }
+    
+     public function setDateFilterFields(array $date_filter_fields)
+    {
+        $this->_date_filter_fields = $date_filter_fields;
+        $this->_queryBuilder->setDateFilterFields($date_filter_fields);
+        return $this;
+    }
+
+    
 }

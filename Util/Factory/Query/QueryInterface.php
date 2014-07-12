@@ -130,6 +130,24 @@ interface QueryInterface
      */
     function setGlobalSearchFields($global_search_fields);
     
+    
+    /**
+     * set date filter
+     *
+     * @param bool $date_filter
+     *
+     * @return Datatable
+     */
+    function setDateFilter($date_filter); 
+    
+    
+    /**
+     * 
+     * @param array $date_filter_fields
+     * @return Datatable
+     */
+    function setDateFilterFields($date_filter_fields);
+    
     /**
      * add join
      * 
