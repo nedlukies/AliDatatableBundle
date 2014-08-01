@@ -168,7 +168,7 @@ class DoctrineBuilder implements QueryInterface
    
         }
         
-        $this->_addJoins();
+        $this->_addJoins($queryBuilder);
     }
     
     protected function _addWhere($queryBuilder, $alias, $condition) { 
@@ -187,7 +187,7 @@ class DoctrineBuilder implements QueryInterface
         }
     }
     
-    protected function _addJoins()
+    protected function _addJoins($queryBuilder)
     {
         
         
@@ -196,11 +196,11 @@ class DoctrineBuilder implements QueryInterface
             
             
             if ($join['cond']) {
-                $this->_addWhere($this->queryBuilder, $join['alias'], $join['cond']);                
+                $this->_addWhere($queryBuilder, $join['alias'], $join['cond']);                
             }
             
             $join_method = $join['type'] == Join::INNER_JOIN ? "innerJoin" : "leftJoin";
-            $this->queryBuilder->$join_method($join['join_field'], $join['alias'], 'WITH', isset($this->joinConditions[$join['alias']]) ? $this->joinConditions[$join['alias']] : null );
+            $queryBuilder->$join_method($join['join_field'], $join['alias'], 'WITH', isset($this->joinConditions[$join['alias']]) ? $this->joinConditions[$join['alias']] : null );
         }
     }
 
@@ -261,13 +261,17 @@ class DoctrineBuilder implements QueryInterface
     public function getTotalRecords()
     {
         $qb = clone $this->queryBuilder;
+    
         $this->_addSearch($qb);
+    
         $qb->resetDQLPart('orderBy');
-
+        
         $gb = $qb->getDQLPart('groupBy');
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
+            
             $qb->select(" count({$this->fields['_identifier_']}) ");
+            
             return $qb->getQuery()->getSingleScalarResult();
         }
         else
