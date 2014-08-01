@@ -136,7 +136,10 @@ class DoctrineBuilder implements QueryInterface
                 
                 foreach ($this->global_search_fields as $field) {
                     
-                    $where->add($queryBuilder->expr()->like($search_fields[$field], "'%$search_param%'"));
+                    $fieldlist = explode(' ',trim($search_fields[$field]));
+                    $search_field = $fieldlist[0];
+                    
+                    $where->add($queryBuilder->expr()->like($search_field, "'%$search_param%'"));
                     
                 }
 
