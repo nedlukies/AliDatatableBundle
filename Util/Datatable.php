@@ -2,17 +2,21 @@
 
 namespace Ali\DatatableBundle\Util;
 
-use Symfony\Component\DependencyInjection\ContainerInterface,
-    Symfony\Component\HttpFoundation\Response;
-use Doctrine\ORM\Query,
-    Doctrine\ORM\Query\Expr\Join;
-use Ali\DatatableBundle\Util\Factory\Query\QueryInterface,
-    Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder,
-    Ali\DatatableBundle\Util\Formatter\Renderer,
-    Ali\DatatableBundle\Util\Factory\Prototype\PrototypeBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\Query\Expr\Join;
+use Ali\DatatableBundle\Util\Factory\Query\QueryInterface;
+use Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder;
+use Ali\DatatableBundle\Util\Factory\Query\MongodbDoctrineBuilder;
+use Ali\DatatableBundle\Util\Formatter\Renderer;
+use Ali\DatatableBundle\Util\Factory\Prototype\PrototypeBuilder;
 
 class Datatable
 {
+
+    /** @var string */
+    protected $_driver = NULL;
 
     /** @var array */
     protected $_fixed_data = NULL;
@@ -55,10 +59,7 @@ class Datatable
 
     /** @var array */
     protected $_search_fields = array();
-    
-    /** @var boolean */
-    protected $_global_search;
-            
+
     /** @var array */
     protected $_global_search_fields = array();
 
@@ -75,8 +76,6 @@ class Datatable
     /** @var Datatable */
     protected static $_current_instance = NULL;
 
-    
-    
     /**
      * class constructor 
      * 
@@ -105,6 +104,30 @@ class Datatable
             $this->_has_action = $this->_config['all']['action'];
             $this->_search     = $this->_config['all']['search'];
         }
+    }
+
+    /**
+     * set the database driver (orm/mongodb)
+     * 
+     * @param string $driver
+     * 
+     * @return \Ali\DatatableBundle\Util\Datatable
+     */
+    public function driver($driver = 'orm')
+    {
+        $this->_driver = $driver;
+        switch ($driver)
+        {
+            case 'orm':
+                $this->_queryBuilder = new DoctrineBuilder($this->_container);
+                break;
+            case 'mongodb':
+                $this->_queryBuilder = new MongodbDoctrineBuilder($this->_container);
+                break;
+            default:
+                throw new \Exception(sprintf('Unknown driver [%s], supported drivers are : %s ', $driver, 'orm|mongodb'));
+        }
+        return $this;
     }
 
     /**
@@ -141,7 +164,7 @@ class Datatable
     {
         $request       = $this->_request;
         $iTotalRecords = $this->_queryBuilder->getTotalRecords();
-        list($data, $objects) = $this->_queryBuilder->getData($hydration_mode);
+        list($data, $raw) = $this->_queryBuilder->getData($hydration_mode);
         $id_index      = array_search('_identifier_', array_keys($this->getFields()));
         $ids           = array();
         array_walk($data, function($val, $key) use ($data, $id_index, &$ids) {
@@ -161,7 +184,7 @@ class Datatable
         }
         if (!is_null($this->_renderer_obj))
         {
-            $this->_renderer_obj->applyTo($data,$objects);
+            $this->_renderer_obj->applyTo($data,$raw);
         }
         if (!empty($this->_multiple))
         {
@@ -322,6 +345,20 @@ class Datatable
     {
         $this->_queryBuilder->setEntity($entity_name, $entity_alias);
         return $this;
+    }
+
+    /**
+     * Proxy to setEntity
+     * 
+     * @see setEntity
+     * 
+     * @param string $document_name
+     * 
+     * @return Datatable
+     */
+    public function setDocument($document_name)
+    {
+        return $this->setEntity($document_name, NULL);
     }
 
     /**
@@ -644,7 +681,7 @@ class Datatable
         $this->_queryBuilder->setGlobalSearchFields($global_search_fields);
         return $this;
     }
-
+    
     
     /**
      * 
@@ -682,5 +719,4 @@ class Datatable
         return $this;
     }
 
-    
 }

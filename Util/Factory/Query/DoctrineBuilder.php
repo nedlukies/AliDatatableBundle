@@ -82,7 +82,7 @@ class DoctrineBuilder implements QueryInterface
     public function __construct(ContainerInterface $container)
     {
         $this->container    = $container;
-        $this->em           = $this->container->get('doctrine.orm.entity_manager');
+        $this->em           = $this->container->get('doctrine')->getManager();
         $this->request      = $this->container->get('request');
         $this->queryBuilder = $this->em->createQueryBuilder();
     }

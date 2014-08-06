@@ -29,7 +29,7 @@
         }
         var $options = {{ js | raw }};
         var $opts = {};
-        for(key in $options) {
+        for(key in $options) { 
             if ($options.hasOwnProperty(key)) {
                 $opts[key] = $options[key];
                 try{
