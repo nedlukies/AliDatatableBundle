@@ -358,4 +358,21 @@ class MongodbDoctrineBuilder implements QueryInterface
         return $this;
     }
 
+    public function setDateFilter($date_filter) {
+        
+    }
+
+    public function setDateFilterFields($date_filter_fields) {
+        
+    }
+
+    public function setGlobalSearch($global_search) {
+        
+    }
+
+    public function setGlobalSearchFields($global_search_fields) {
+        
+    }
+    
+   
 }
