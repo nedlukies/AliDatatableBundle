@@ -4,6 +4,8 @@ namespace Ali\DatatableBundle\Util\Factory\Query;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Doctrine\ORM\Query;
+use Doctrine\ODM\MongoDB\QueryBuilder;
+
 
 class MongodbDoctrineBuilder implements QueryInterface
 {
@@ -52,7 +54,24 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /** @var boolean */
     protected $search = FALSE;
-
+    
+        /** @var boolean */
+    protected $global_search = FALSE;
+    
+    /** @var array */
+    protected $global_search_fields = array();
+    
+    /** @var boolean */
+    protected $date_filter = FALSE;
+        
+    /** @var array */
+    
+    protected $date_filter_fields = array();
+     
+    /** @var string */
+    
+    protected $group_by = NULL;
+    
     /**
      * class constructor 
      * 
@@ -73,7 +92,49 @@ class MongodbDoctrineBuilder implements QueryInterface
      */
     protected function _addSearch(\Doctrine\ODM\MongoDB\Query\Builder $queryBuilder)
     {
-        throw new \Exception('ODM search not implemented');
+        
+        
+                
+        if ($this->global_search == TRUE)
+        {
+            $request       = $this->request;
+            
+            $search_param = null;
+            
+            if ($search_params = $request->get("search")) {
+                // DataTables 1.10
+                
+                if (isset($search_params['value'])) {
+                    $search_param = $search_params['value'];
+                }
+            } else {
+                $search_param = $request->get("sSearch") ;
+            }
+            
+            $search_fields = array_values($this->fields);
+          
+            if ($search_param)
+            {
+                $where = $queryBuilder->expr();
+                
+                
+                
+                foreach ($this->global_search_fields as $field) {
+                    
+                    $fieldlist = explode(' ',trim($search_fields[$field]));
+                    $search_field = $fieldlist[0];
+                    
+                   $where =  $queryBuilder->expr()->field($search_field)->equals(new \MongoRegex('/.*' . $search_param . '.*/i'));
+                    
+                    $queryBuilder->addOr($where);
+                    
+                }
+
+               
+                
+            }
+            
+        }
     }
 
     /**
@@ -124,6 +185,9 @@ class MongodbDoctrineBuilder implements QueryInterface
     public function getTotalRecords()
     {
         $qb = clone $this->queryBuilder;
+        
+        $this->_addSearch($qb);
+        
         //$this->_addSearch($qb);
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
@@ -165,7 +229,7 @@ class MongodbDoctrineBuilder implements QueryInterface
             }
         }
 //        $qb->select($selectFields);
-//        $this->_addSearch($qb);
+        $this->_addSearch($qb);
 //        $qb->hydrate(false);
         $limit = (int) $request->get('iDisplayLength');
         $skip  = (int) $request->get('iDisplayStart');
@@ -367,10 +431,14 @@ class MongodbDoctrineBuilder implements QueryInterface
     }
 
     public function setGlobalSearch($global_search) {
+        $this->global_search = $global_search;
+        return $this;
         
     }
 
     public function setGlobalSearchFields($global_search_fields) {
+        $this->global_search_fields = $global_search_fields;
+        return $this;
         
     }
     
