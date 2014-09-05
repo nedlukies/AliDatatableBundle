@@ -243,7 +243,7 @@ class MongodbDoctrineBuilder implements QueryInterface
         $data                 = array();
         foreach ($items as $item)
         {
-            $_item = [];
+            $_item = array();
             $item  = $this->_toArray($item);
             foreach ($selectFields as $key => $value)
             {
@@ -251,7 +251,7 @@ class MongodbDoctrineBuilder implements QueryInterface
             }
             $data[] = array_values($_item);
         }
-        return [$data, $items];
+        return array($data, $items);
     }
 
     /**
