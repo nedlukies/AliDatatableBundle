@@ -307,7 +307,7 @@ class MongodbDoctrineBuilder implements QueryInterface
     /**
      * get doctrine query builder
      * 
-     * @return \Doctrine\ORM\QueryBuilder
+     * @return \Doctrine\ODM\MongoDB\QueryBuilder
      */
     public function getDoctrineQueryBuilder()
     {
@@ -412,11 +412,11 @@ class MongodbDoctrineBuilder implements QueryInterface
     /**
      * set doctrine query builder
      * 
-     * @param \Doctrine\ORM\QueryBuilder $queryBuilder
+     * @param \Doctrine\ODM\MongoDB\QueryBuilder $queryBuilder
      * 
      * @return DoctrineBuilder 
      */
-    public function setDoctrineQueryBuilder(\Doctrine\ORM\QueryBuilder $queryBuilder)
+    public function setDoctrineQueryBuilder(\Doctrine\ODM\MongoDB\QueryBuilder $queryBuilder)
     {
         $this->queryBuilder = $queryBuilder;
         return $this;
