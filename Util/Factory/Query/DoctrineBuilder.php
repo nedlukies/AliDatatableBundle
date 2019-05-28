@@ -5,6 +5,7 @@ namespace Ali\DatatableBundle\Util\Factory\Query;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr\Join;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 class DoctrineBuilder implements QueryInterface
 {
@@ -79,11 +80,11 @@ class DoctrineBuilder implements QueryInterface
      * 
      * @param ContainerInterface $container 
      */
-    public function __construct(ContainerInterface $container)
+    public function __construct(ContainerInterface $container, $em)
     {
         $this->container    = $container;
-        $this->em           = $this->container->get('doctrine')->getManager();
-        $this->request      = $this->container->get('request');
+        $this->em           = $em;
+        $this->request      = Request::createFromGlobals();
         $this->queryBuilder = $this->em->createQueryBuilder();
     }
 
@@ -101,12 +102,13 @@ class DoctrineBuilder implements QueryInterface
             foreach ($search_fields as $i => $search_field)
             {
                 $search_param = $request->get("sSearch_{$i}");
-                if ($request->get("sSearch_{$i}") !== false && !empty($search_param))
+                if ($search_param !== false && $search_param != '')
                 {
-                    $field = explode(' ',trim($search_field));
+                    $field        = explode(' ', trim($search_field));
                     $search_field = $field[0];
-                    
-                    $queryBuilder->andWhere(" $search_field like '%{$request->get("sSearch_{$i}")}%' ");
+
+                    $queryBuilder->andWhere(" $search_field like :ssearch{$i} ");
+                    $queryBuilder->setParameter("ssearch{$i}", '%' . $request->get("sSearch_{$i}") . '%');
                 }
             }
         }
@@ -241,15 +243,13 @@ class DoctrineBuilder implements QueryInterface
      */
     public function addJoin($join_field, $alias, $type = Join::INNER_JOIN, $cond = '')
     {
-        $this->joins[] = array(
-            'join_field' => $join_field,
-            'alias' => $alias,
-            'type' => $type,
-            'cond' => $cond
-        );
-        
-        
-        
+        if ($cond != '')
+        {
+            $cond = " with {$cond} ";
+        }
+        $join_method   = $type == Join::INNER_JOIN ? "innerJoin" : "leftJoin";
+        $this->queryBuilder->$join_method($join_field, $alias, null, $cond);
+        $this->joins[] = array($join_field, $alias, $type, $cond);
         return $this;
     }
 
@@ -261,17 +261,13 @@ class DoctrineBuilder implements QueryInterface
     public function getTotalRecords()
     {
         $qb = clone $this->queryBuilder;
-    
         $this->_addSearch($qb);
-    
         $qb->resetDQLPart('orderBy');
-        
+
         $gb = $qb->getDQLPart('groupBy');
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
-            
             $qb->select(" count({$this->fields['_identifier_']}) ");
-            
             return $qb->getQuery()->getSingleScalarResult();
         }
         else
@@ -285,15 +281,15 @@ class DoctrineBuilder implements QueryInterface
     /**
      * get data
      * 
-     * @param int $hydration_mode
-     * 
      * @return array 
      */
-    public function getData($hydration_mode)
+    public function getData()
     {
         $request    = $this->request;
         $dql_fields = array_values($this->fields);
-        if ($request->get('iSortCol_0') != null)
+
+        // add sorting
+        if ($request->get('iSortCol_0') !== null)
         {
             $order_field = current(explode(' as ', $dql_fields[$request->get('iSortCol_0')]));
         }
@@ -323,53 +319,92 @@ class DoctrineBuilder implements QueryInterface
         {
             $qb->resetDQLPart('orderBy');
         }
-        
-        
-        $qb->select($dql_fields);
+
+        // extract alias selectors
+        $select = array($this->entity_alias);
+        foreach ($this->joins as $join)
+        {
+            $select[] = $join[1];
+        }
+        $qb->select(implode(',', $select));
+
+        // add search
         $this->_addSearch($qb);
+
+        // get results and process data formatting
         $query          = $qb->getQuery();
         $iDisplayLength = (int) $request->get('length') ? $request->get('length') : $request->get('iDisplayLength');
         if ($iDisplayLength > 0)
         {
             $query->setMaxResults($iDisplayLength)->setFirstResult($request->get('start') ? $request->get('start') : $request->get('iDisplayStart'));
         }
-        
-        $objects      = $query->getResult(Query::HYDRATE_OBJECT);
-        $selectFields = array();
-        
-        foreach ($this->fields as $label => $selector)
-        {
-            $has_alias      = preg_match_all('~([A-z]?\.[A-z]+)?\sas\s(.*)~', $selector, $matches);
-           
-            
-            if ($has_alias) {
-                $selectFields[] = $matches[2][0];
-            } else {
-                $selectFields[] = substr($selector, strpos($selector, '.') + 1);
+        $objects         = $query->getResult(Query::HYDRATE_OBJECT);
+        $data            = array();
+        $entity_alias    = $this->entity_alias;
+        $joins           = $this->joins;
+        $__getParentChain = function($field) use($entity_alias, $joins, &$__getParentChain) {
+            foreach ($joins as $join)
+            {
+                if ($join[1] == $field[0])
+                {
+                    if ($join[0][0] == $entity_alias)
+                    {
+                        return substr($join[0], 2);
+                    }
+                    else
+                    {
+                        $f = $join[0];
+                        if (strpos($f, ' '))
+                        {
+                            $_f = substr($f, 2, strpos($f, ' '));
+                        }
+                        else
+                        {
+
+                            $_f = substr($f, 2);
+                        }
+                        return $__getParentChain($join[0]) . '.' . $_f;
+                    }
+                }
             }
-           
-            
+        };
+        $__getKey = function($field) use($entity_alias, $__getParentChain) {
+            $has_alias = preg_match_all('~([A-z]?\.[A-z]+)?\sas~', $field, $matches);
+            $_f        = ( $has_alias > 0 ) ? $matches[1][0] : $field;
+            $_f        = explode('.', $_f)[1];
+            if ($field[0] != $entity_alias)
+            {
+                return $__getParentChain($field) . '.' . $_f;
+            }
+            return $_f;
+        };
+        $fields = array();
+        foreach ($this->fields as $field)
+        {
+            $fields[] = $__getKey($field);
         }
-        
-        
-        
-      
-        $data = array();
+        $__getValue = function($prop, $object)use(&$__getValue) {
+            if (strpos($prop, '.'))
+            {
+                $_prop     = substr($prop, 0, strpos($prop, '.'));
+                $ref_class = new \ReflectionClass($object);
+                $property  = $ref_class->getProperty($_prop);
+                $property->setAccessible(true);
+                return $__getValue(substr($prop, strpos($prop, '.') + 1), $property->getValue($object));
+            }
+            $ref_class = new \ReflectionClass($object);
+            $property  = $ref_class->getProperty($prop);
+            $property->setAccessible(true);
+            return $property->getValue($object);
+        };
         foreach ($objects as $object)
         {
-            $d   = array();
-            if (!is_array($object)) {
-                
-                $map = $this->_toArray($object);
-            } else {
-                $map = $object;
-            }
-            
-            foreach ($selectFields as $key)
+            $item = array();
+            foreach ($fields as $_field)
             {
-                $d[] = $map[$key];
+                $item[] = $__getValue($_field, $object);
             }
-            $data[] = $d;
+            $data[] = $item;
         }
         return array($data, $objects);
     }
@@ -437,8 +472,8 @@ class DoctrineBuilder implements QueryInterface
     /**
      * set entity
      * 
-     * @param type $entity_name
-     * @param type $entity_alias
+     * @param string $entity_name
+     * @param string $entity_alias
      * 
      * @return Datatable 
      */
@@ -467,14 +502,13 @@ class DoctrineBuilder implements QueryInterface
     /**
      * set order
      * 
-     * @param type $order_field
-     * @param type $order_type
+     * @param string $order_field
+     * @param string $order_type
      * 
      * @return Datatable 
      */
     public function setOrder($order_field, $order_type)
     {
-     
         $this->order_field = $order_field;
         $this->order_type  = $order_type;
         $this->queryBuilder->orderBy($order_field, $order_type);
@@ -484,7 +518,7 @@ class DoctrineBuilder implements QueryInterface
     /**
      * set fixed data
      * 
-     * @param type $data
+     * @param array|null $data
      * 
      * @return Datatable 
      */

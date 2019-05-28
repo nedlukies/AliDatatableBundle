@@ -2,8 +2,9 @@
 
 namespace Ali\DatatableBundle\Twig\Extension;
 
-use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Ali\DatatableBundle\Util\Datatable;
 
 class AliDatatableExtension extends \Twig_Extension
@@ -21,6 +22,18 @@ class AliDatatableExtension extends \Twig_Extension
     {
         $this->_container = $container;
     }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function getFunctions()
+    {
+        return array(
+            new \Twig_SimpleFunction('datatable', array($this, 'datatable'), array("is_safe" => array("html")))
+        );
+    }
+
+    
 
     /**
      * {@inheritdoc}
@@ -29,17 +42,36 @@ class AliDatatableExtension extends \Twig_Extension
     {
         return array(
             new \Twig_SimpleFilter('mongodate', array($this, 'convertMongoDateFilter')),
+            new \Twig_SimpleFilter('dta_trans', array($this, 'dtatransFilter'))
         );
     }
     
+
     /**
      * {@inheritdoc}
      */
-    public function getFunctions()
+    public function getFilters()
     {
         return array(
-            'datatable' => new \Twig_Function_Method($this, 'datatable', array("is_safe" => array("html")))
+            new \Twig_SimpleFilter('dta_trans', array($this, 'dtatransFilter'))
         );
+    }
+
+    /**
+     * Datatable translate filter
+     * 
+     * @param string $id
+     * 
+     * @return string
+     */
+    public function dtatransFilter($id)
+    {
+        $translator = $this->_container->get('translator');
+        $callback   = function($id) {
+            $path = $this->_container->get('kernel')->locateResource('@AliDatatableBundle/Resources/translations/messages.en.yml');
+            return \Symfony\Component\Yaml\Yaml::parse(file_get_contents($path))['ali']['common'][explode('.', $id)[2]];
+        };
+        return $translator->trans($id) === $id ? $callback($id) : $translator->trans($id);
     }
 
     /**
@@ -83,11 +115,17 @@ class AliDatatableExtension extends \Twig_Extension
         {
             $main_template = $options['main_template'];
         }
+        $session                  = $this->_container->get('session');
+        $rawjs                    = $this->_container
+                ->get('templating')
+                ->render('AliDatatableBundle:Internal:script.html.twig', $options);
+        $sess_dtb                 = $session->get('datatable', array());
+        $sess_dtb[$options['id']] = $rawjs;
+        $session->set('datatable', $sess_dtb);
 
         return $this->_container
                         ->get('templating')
-                        ->render(
-                                $main_template, $options);
+                        ->render($main_template, $options);
     }
 
     /**
@@ -98,9 +136,16 @@ class AliDatatableExtension extends \Twig_Extension
      */
     private function createDeleteForm($id)
     {
-        return $this->createFormBuilder(array('id' => $id))
-                        ->add('id', 'hidden')
-                        ->getForm();
+        if (version_compare(phpversion(), '5.5', '<')) {
+            return $this->createFormBuilder(array('id' => $id))
+                ->add('id', 'hidden')
+                ->getForm();
+        }
+        else {
+            return $this->createFormBuilder(array('id' => $id))
+                ->add('id', 'Symfony\Component\Form\Extension\Core\Type\HiddenType')
+                ->getForm();
+        }
     }
 
     /**
@@ -112,7 +157,12 @@ class AliDatatableExtension extends \Twig_Extension
      */
     public function createFormBuilder($data = null, array $options = array())
     {
-        return $this->_container->get('form.factory')->createBuilder('form', $data, $options);
+        if (version_compare(phpversion(), '5.5', '<')) {
+            return $this->_container->get('form.factory')->createBuilder('form', $data, $options);
+        }
+        else {
+            return $this->_container->get('form.factory')->createBuilder('Symfony\Component\Form\Extension\Core\Type\FormType', $data, $options);
+        }
     }
 
     /**
