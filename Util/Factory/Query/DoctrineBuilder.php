@@ -309,20 +309,8 @@ class DoctrineBuilder implements QueryInterface
             $qb->resetDQLPart('orderBy');
         }
 
-        // extract alias selectors
-        $select = array($this->entity_alias);
-        foreach ($this->joins as $join)
-        {
-            $select[] = $join[1];
-        }
 
-        if (isset($order_select)) {
-            $select[] = $order_select;
-
-        }
-        $qb->select(implode(',', $select));
-
-        // add search
+        $qb->select($dql_fields);
         $this->_addSearch($qb);
 
         // get results and process data formatting
@@ -333,98 +321,42 @@ class DoctrineBuilder implements QueryInterface
             $query->setMaxResults($iDisplayLength)->setFirstResult($request->get('start') ? $request->get('start') : $request->get('iDisplayStart'));
         }
 
-        $objects         = $query->getResult(Query::HYDRATE_OBJECT);
-        $data            = array();
-        $entity_alias    = $this->entity_alias;
-        $joins           = $this->joins;
+        $objects      = $query->getResult(Query::HYDRATE_OBJECT);
+        $selectFields = array();
 
-        $__getParentChain = function($fieldEntityAlias, $fieldColumn = null) use($entity_alias, $joins, &$__getParentChain) {
-            foreach ($joins as $join)
-            {
-
-
-                if ($join[1] == $fieldEntityAlias)
-                {
-
-                    list ($joinEntityAlias, $joinColumn) = explode('.', $join[0]);
-
-                    if ($joinEntityAlias == $entity_alias)
-                    {
-                        return $joinColumn;
-                    }
-                    else
-                    {
-
-                        return $__getParentChain($joinEntityAlias, $joinColumn) . '.' . $joinColumn;
-
-                    }
-                }
-            }
-        };
-        $__getKey = function($field) use($entity_alias, $__getParentChain) {
-
-            $has_alias = preg_match_all('~([A-z]*\()?([A-z]+\.{1}[A-z]+)\)?\sas~', $field, $matches);
-            $_f        = ( $has_alias > 0 ) ? $matches[2][0] : $field;
-            $_f        = explode('.', $_f);
-
-
-            if ($_f[0] != $entity_alias)
-            {
-
-                return $__getParentChain($_f[0],$_f[1]) . '.' . $_f[1];
-            }
-            return $_f[1];
-        };
-
-        $fields = array();
-
-        foreach ($this->fields as $field)
+        foreach ($this->fields as $label => $selector)
         {
-            $fields[] = $__getKey($field);
+            $has_alias      = preg_match_all('~([A-z]?\.[A-z]+)?\sas\s(.*)~', $selector, $matches);
+
+
+            if ($has_alias) {
+                $selectFields[] = $matches[2][0];
+            } else {
+                $selectFields[] = substr($selector, strpos($selector, '.') + 1);
+            }
+
+
         }
 
 
 
-        $__getValue = function($prop, $object)use(&$__getValue) {
-            if (!$object) {
-                return;
-            }
 
-            if (strpos($prop, '.'))
-            {
-                $_prop     = substr($prop, 0, strpos($prop, '.'));
-                $ref_class = new \ReflectionClass($object);
-                $property  = $ref_class->getProperty($_prop);
-                $property->setAccessible(true);
-                return $__getValue(substr($prop, strpos($prop, '.') + 1), $property->getValue($object));
-            }
-
-
-            if ($object instanceof PersistentCollection) {
-                $object = $object->first();
-            }
-
-            if (!$object) {
-                return;
-            }
-
-            $ref_class = new \ReflectionClass($object);
-
-            $property = $ref_class->getProperty($prop);
-
-            $property->setAccessible(true);
-            return $property->getValue($object);
-        };
-
-
+        $data = array();
         foreach ($objects as $object)
         {
-            $item = array();
-            foreach ($fields as $_field)
-            {
-                $item[] = $__getValue($_field, $object);
+            $d   = array();
+            if (!is_array($object)) {
+
+                $map = $this->_toArray($object);
+            } else {
+                $map = $object;
             }
-            $data[] = $item;
+
+            foreach ($selectFields as $key)
+            {
+                $d[] = $map[$key];
+            }
+            $data[] = $d;
         }
         return array($data, $objects);
     }
