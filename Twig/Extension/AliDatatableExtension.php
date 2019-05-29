@@ -14,15 +14,15 @@ class AliDatatableExtension extends \Twig_Extension
     protected $_container;
 
     /**
-     * class constructor 
-     * 
-     * @param ContainerInterface $container 
+     * class constructor
+     *
+     * @param ContainerInterface $container
      */
     public function __construct(ContainerInterface $container)
     {
         $this->_container = $container;
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -33,7 +33,7 @@ class AliDatatableExtension extends \Twig_Extension
         );
     }
 
-    
+
 
     /**
      * {@inheritdoc}
@@ -45,23 +45,12 @@ class AliDatatableExtension extends \Twig_Extension
             new \Twig_SimpleFilter('dta_trans', array($this, 'dtatransFilter'))
         );
     }
-    
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getFilters()
-    {
-        return array(
-            new \Twig_SimpleFilter('dta_trans', array($this, 'dtatransFilter'))
-        );
-    }
 
     /**
      * Datatable translate filter
-     * 
+     *
      * @param string $id
-     * 
+     *
      * @return string
      */
     public function dtatransFilter($id)
@@ -76,7 +65,7 @@ class AliDatatableExtension extends \Twig_Extension
 
     /**
      * convert MongoDate to DateTime
-     * 
+     *
      * @param \MongoDate $mongoDate
      * @return \DateTime
      */
@@ -84,12 +73,12 @@ class AliDatatableExtension extends \Twig_Extension
     {
         return new \DateTime('@' . $mongoDate->sec);
     }
-    
+
     /**
      * Converts a string to time
-     * 
+     *
      * @param string $string
-     * @return int 
+     * @return int
      */
     public function datatable($options)
     {
@@ -130,9 +119,9 @@ class AliDatatableExtension extends \Twig_Extension
 
     /**
      * create delete form
-     * 
+     *
      * @param type $id
-     * @return type 
+     * @return type
      */
     private function createDeleteForm($id)
     {
@@ -150,10 +139,10 @@ class AliDatatableExtension extends \Twig_Extension
 
     /**
      * create form builder
-     * 
+     *
      * @param type $data
      * @param array $options
-     * @return type 
+     * @return type
      */
     public function createFormBuilder($data = null, array $options = array())
     {

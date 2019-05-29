@@ -2,6 +2,7 @@
 
 namespace Ali\DatatableBundle\Util\Factory\Query;
 
+use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr\Join;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -42,7 +43,7 @@ class DoctrineBuilder implements QueryInterface
 
     /** @var array */
     protected $joins = array();
-    
+
     /** @var array */
     protected $joinConditions = array();
 
@@ -60,25 +61,25 @@ class DoctrineBuilder implements QueryInterface
 
     /** @var boolean */
     protected $global_search = FALSE;
-    
+
     /** @var array */
     protected $global_search_fields = array();
-    
+
     /** @var boolean */
     protected $date_filter = FALSE;
-        
+
     /** @var array */
-    
+
     protected $date_filter_fields = array();
-    
+
     /** @var string */
-    
+
     protected $group_by = NULL;
-    
+
     /**
-     * class constructor 
-     * 
-     * @param ContainerInterface $container 
+     * class constructor
+     *
+     * @param ContainerInterface $container
      */
     public function __construct(ContainerInterface $container, $em)
     {
@@ -90,7 +91,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get the search dql
-     * 
+     *
      * @return string
      */
     protected function _addSearch(\Doctrine\ORM\QueryBuilder $queryBuilder)
@@ -112,72 +113,71 @@ class DoctrineBuilder implements QueryInterface
                 }
             }
         }
-        
+
         if ($this->global_search == TRUE)
         {
             $request       = $this->request;
-            
+
             $search_param = null;
-            
+
             if ($search_params = $request->get("search")) {
                 // DataTables 1.10
-                
+
                 if (isset($search_params['value'])) {
                     $search_param = $search_params['value'];
                 }
             } else {
                 $search_param = $request->get("sSearch") ;
             }
-            
+
             $search_fields = array_values($this->fields);
-          
+
             if ($search_param)
             {
                 $where = $queryBuilder->expr()->orX();
-                
-                
+
+
                 foreach ($this->global_search_fields as $field) {
-                    
+
                     $fieldlist = explode(' ',trim($search_fields[$field]));
                     $search_field = $fieldlist[0];
-                    
+
                     $where->add($queryBuilder->expr()->like($search_field, "'%$search_param%'"));
-                    
+
                 }
 
                 $queryBuilder->andWhere($where);
-                
+
             }
-            
+
         }
-        
+
         if ($this->date_filter == TRUE) {
-            
-            
-            
+
+
+
             foreach ($this->date_filter_fields as $field) {
-                
+
                 list($alias, $column) = explode(".", $field);
-                
+
                 if ($startDate = $request->get('startDateRange')) {
                     $this->_addWhere($queryBuilder, $alias, $queryBuilder->expr()->gte($field, "'$startDate'"));
                 }
-                
+
                 if ($endDate = $request->get('endDateRange')) {
                     $this->_addWhere($queryBuilder, $alias, $queryBuilder->expr()->lte($field, "'$endDate'"));
                 }
             }
-   
+
         }
-        
-        $this->_addJoins($queryBuilder);
+
     }
-    
-    protected function _addWhere($queryBuilder, $alias, $condition) { 
-        
+
+    protected function _addWhere($queryBuilder, $alias, $condition) {
+
         if ($alias == $this->entity_alias) {
             $queryBuilder->andWhere($condition);
-            
+
         } else {
             if (!isset($this->joinConditions[$alias])) {
                    $this->joinConditions[$alias] = $queryBuilder->expr()->andX();
@@ -186,23 +186,6 @@ class DoctrineBuilder implements QueryInterface
             $this->joinConditions[$alias]->add($condition);
 
             return $this->joinConditions[$alias];
-        }
-    }
-    
-    protected function _addJoins($queryBuilder)
-    {
-        
-        
-        foreach ($this->joins as $join) {
-            
-            
-            
-            if ($join['cond']) {
-                $this->_addWhere($queryBuilder, $join['alias'], $join['cond']);                
-            }
-            
-            $join_method = $join['type'] == Join::INNER_JOIN ? "innerJoin" : "leftJoin";
-            $queryBuilder->$join_method($join['join_field'], $join['alias'], 'WITH', isset($this->joinConditions[$join['alias']]) ? $this->joinConditions[$join['alias']] : null );
         }
     }
 
@@ -226,20 +209,20 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * add join
-     * 
+     *
      * @example:
-     *      ->setJoin( 
-     *              'r.event', 
-     *              'e', 
-     *              \Doctrine\ORM\Query\Expr\Join::INNER_JOIN, 
-     *              'e.name like %test%') 
-     * 
+     *      ->setJoin(
+     *              'r.event',
+     *              'e',
+     *              \Doctrine\ORM\Query\Expr\Join::INNER_JOIN,
+     *              'e.name like %test%')
+     *
      * @param string $join_field
      * @param string $alias
      * @param string $type
      * @param string $cond
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function addJoin($join_field, $alias, $type = Join::INNER_JOIN, $cond = '')
     {
@@ -255,8 +238,8 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get total records
-     * 
-     * @return integer 
+     *
+     * @return integer
      */
     public function getTotalRecords()
     {
@@ -280,8 +263,8 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get data
-     * 
-     * @return array 
+     *
+     * @return array
      */
     public function getData()
     {
@@ -294,22 +277,22 @@ class DoctrineBuilder implements QueryInterface
             $order_field = current(explode(' as ', $dql_fields[$request->get('iSortCol_0')]));
         }
         elseif ($order = $request->get('order')) {
-            
+
              if (preg_match('/\s*as\s*/', $dql_fields[$order[0]['column']], $matches)) {
-                 
+
                  list($field, $order_field) = explode($matches[0], $dql_fields[$order[0]['column']]);
              } else {
                  $order_field = $dql_fields[$order[0]['column']];
              }
-             
+
              $direction = $order[0]['dir'];
         }
         else
         {
             $order_field = null;
         }
-        
-        
+
+
         $qb = clone $this->queryBuilder;
         if (!is_null($order_field))
         {
@@ -338,52 +321,64 @@ class DoctrineBuilder implements QueryInterface
         {
             $query->setMaxResults($iDisplayLength)->setFirstResult($request->get('start') ? $request->get('start') : $request->get('iDisplayStart'));
         }
+
         $objects         = $query->getResult(Query::HYDRATE_OBJECT);
         $data            = array();
         $entity_alias    = $this->entity_alias;
         $joins           = $this->joins;
-        $__getParentChain = function($field) use($entity_alias, $joins, &$__getParentChain) {
+
+        $__getParentChain = function($fieldEntityAlias, $fieldColumn = null) use($entity_alias, $joins, &$__getParentChain) {
             foreach ($joins as $join)
             {
-                if ($join[1] == $field[0])
+
+
+                if ($join[1] == $fieldEntityAlias)
                 {
-                    if ($join[0][0] == $entity_alias)
+
+                    list ($joinEntityAlias, $joinColumn) = explode('.', $join[0]);
+
+                    if ($joinEntityAlias == $entity_alias)
                     {
-                        return substr($join[0], 2);
+                        return $joinColumn;
                     }
                     else
                     {
-                        $f = $join[0];
-                        if (strpos($f, ' '))
-                        {
-                            $_f = substr($f, 2, strpos($f, ' '));
-                        }
-                        else
-                        {
 
-                            $_f = substr($f, 2);
-                        }
-                        return $__getParentChain($join[0]) . '.' . $_f;
+                        return $__getParentChain($joinEntityAlias, $joinColumn) . '.' . $joinColumn;
+
                     }
                 }
             }
         };
         $__getKey = function($field) use($entity_alias, $__getParentChain) {
-            $has_alias = preg_match_all('~([A-z]?\.[A-z]+)?\sas~', $field, $matches);
-            $_f        = ( $has_alias > 0 ) ? $matches[1][0] : $field;
-            $_f        = explode('.', $_f)[1];
-            if ($field[0] != $entity_alias)
+
+            $has_alias = preg_match_all('~([A-z]*\()?([A-z]+\.{1}[A-z]+)\)?\sas~', $field, $matches);
+            $_f        = ( $has_alias > 0 ) ? $matches[2][0] : $field;
+            $_f        = explode('.', $_f);
+
+
+            if ($_f[0] != $entity_alias)
             {
-                return $__getParentChain($field) . '.' . $_f;
+
+                return $__getParentChain($_f[0],$_f[1]) . '.' . $_f[1];
             }
-            return $_f;
+            return $_f[1];
         };
+
         $fields = array();
+
         foreach ($this->fields as $field)
         {
             $fields[] = $__getKey($field);
         }
+
+
+
         $__getValue = function($prop, $object)use(&$__getValue) {
+            if (!$object) {
+                return;
+            }
+
             if (strpos($prop, '.'))
             {
                 $_prop     = substr($prop, 0, strpos($prop, '.'));
@@ -392,11 +387,25 @@ class DoctrineBuilder implements QueryInterface
                 $property->setAccessible(true);
                 return $__getValue(substr($prop, strpos($prop, '.') + 1), $property->getValue($object));
             }
+
+
+            if ($object instanceof PersistentCollection) {
+                $object = $object->first();
+            }
+
+            if (!$object) {
+                return;
+            }
+
             $ref_class = new \ReflectionClass($object);
-            $property  = $ref_class->getProperty($prop);
+
+            $property = $ref_class->getProperty($prop);
+            
             $property->setAccessible(true);
             return $property->getValue($object);
         };
+
+
         foreach ($objects as $object)
         {
             $item = array();
@@ -411,7 +420,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get entity name
-     * 
+     *
      * @return string
      */
     public function getEntityName()
@@ -421,7 +430,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get entity alias
-     * 
+     *
      * @return string
      */
     public function getEntityAlias()
@@ -431,7 +440,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get fields
-     * 
+     *
      * @return array
      */
     public function getFields()
@@ -451,7 +460,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get order type
-     * 
+     *
      * @return string
      */
     public function getOrderType()
@@ -461,7 +470,7 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * get doctrine query builder
-     * 
+     *
      * @return \Doctrine\ORM\QueryBuilder
      */
     public function getDoctrineQueryBuilder()
@@ -471,11 +480,11 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set entity
-     * 
+     *
      * @param string $entity_name
      * @param string $entity_alias
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setEntity($entity_name, $entity_alias)
     {
@@ -487,10 +496,10 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set fields
-     * 
+     *
      * @param array $fields
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setFields(array $fields)
     {
@@ -501,11 +510,11 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set order
-     * 
+     *
      * @param string $order_field
      * @param string $order_type
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setOrder($order_field, $order_type)
     {
@@ -517,10 +526,10 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set fixed data
-     * 
+     *
      * @param array|null $data
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setFixedData($data)
     {
@@ -530,11 +539,11 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set query where
-     * 
+     *
      * @param string $where
      * @param array  $params
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setWhere($where, array $params = array())
     {
@@ -545,10 +554,10 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set query group
-     * 
+     *
      * @param string $group
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setGroupBy($group)
     {
@@ -558,9 +567,9 @@ class DoctrineBuilder implements QueryInterface
 
     /**
      * set search
-     * 
+     *
      * @param bool $search
-     * 
+     *
      * @return Datatable
      */
     public function setSearch($search)
@@ -568,13 +577,13 @@ class DoctrineBuilder implements QueryInterface
         $this->search = $search;
         return $this;
     }
-    
-    
+
+
     /**
      * set global search
-     * 
+     *
      * @param bool $search
-     * 
+     *
      * @return Datatable
      */
     public function setGlobalSearch($global_search)
@@ -582,10 +591,10 @@ class DoctrineBuilder implements QueryInterface
         $this->global_search = $global_search;
         return $this;
     }
-    
+
 
     /**
-     * 
+     *
      * @param array $global_search_fields
      * @return \Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder
      */
@@ -594,12 +603,12 @@ class DoctrineBuilder implements QueryInterface
         return $this;
     }
 
-    
+
      /**
      * set date_filter
-     * 
+     *
      * @param bool $search
-     * 
+     *
      * @return Datatable
      */
     public function setDateFilter($date_filter)
@@ -607,10 +616,10 @@ class DoctrineBuilder implements QueryInterface
         $this->date_filter = $date_filter;
         return $this;
     }
-    
+
 
     /**
-     * 
+     *
      * @param array $date_filter_fields
      * @return \Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder
      */
@@ -618,13 +627,13 @@ class DoctrineBuilder implements QueryInterface
         $this->date_filter_fields = $date_filter_fields;
         return $this;
     }
-    
+
     /**
      * set doctrine query builder
-     * 
+     *
      * @param \Doctrine\ORM\QueryBuilder $queryBuilder
-     * 
-     * @return DoctrineBuilder 
+     *
+     * @return DoctrineBuilder
      */
     public function setDoctrineQueryBuilder(\Doctrine\ORM\QueryBuilder $queryBuilder)
     {

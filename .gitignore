@@ -6,4 +6,3 @@ vendor
 composer.phar
 composer.lock
 phpunit.xml
->>>>>>> 5c95e8fe6bdb2f02f52b3f77c9e087f8f0d7aad0
