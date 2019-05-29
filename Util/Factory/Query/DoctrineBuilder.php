@@ -271,6 +271,7 @@ class DoctrineBuilder implements QueryInterface
         $request    = $this->request;
         $dql_fields = array_values($this->fields);
 
+
         // add sorting
         if ($request->get('iSortCol_0') !== null)
         {
@@ -278,9 +279,14 @@ class DoctrineBuilder implements QueryInterface
         }
         elseif ($order = $request->get('order')) {
 
+
              if (preg_match('/\s*as\s*/', $dql_fields[$order[0]['column']], $matches)) {
 
                  list($field, $order_field) = explode($matches[0], $dql_fields[$order[0]['column']]);
+
+
+                 $order_field = $field;
+
              } else {
                  $order_field = $dql_fields[$order[0]['column']];
              }
@@ -308,6 +314,11 @@ class DoctrineBuilder implements QueryInterface
         foreach ($this->joins as $join)
         {
             $select[] = $join[1];
+        }
+
+        if (isset($order_select)) {
+            $select[] = $order_select;
+
         }
         $qb->select(implode(',', $select));
 
@@ -400,7 +411,7 @@ class DoctrineBuilder implements QueryInterface
             $ref_class = new \ReflectionClass($object);
 
             $property = $ref_class->getProperty($prop);
-            
+
             $property->setAccessible(true);
             return $property->getValue($object);
         };
