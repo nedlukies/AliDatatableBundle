@@ -504,7 +504,7 @@ class DoctrineBuilder implements QueryInterface
      */
     public function setGroupBy($group)
     {
-        $this->queryBuilder->groupBy($group);
+        $this->queryBuilder->addGroupBy($group);
         return $this;
     }
 
