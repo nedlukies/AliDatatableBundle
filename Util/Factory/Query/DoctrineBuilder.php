@@ -249,8 +249,8 @@ class DoctrineBuilder implements QueryInterface
 
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
-            $qb->select(" count({$this->fields['_identifier_']}) ");
-            return $qb->getQuery()->getSingleScalarResult();
+
+            return count($qb->getQuery()->getArrayResult());
         }
         else
         {
