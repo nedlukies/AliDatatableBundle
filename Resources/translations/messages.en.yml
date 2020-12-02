@@ -15,9 +15,8 @@ ali:
         sSearch: "Search:"
         sLoadingRecords: ""
         sFirst: "First"
-        sPrevious: "Previous"  
+        sPrevious: "Previous"
         sNext: "Next"
         sLast: "Last"
         search: "Search"
         all_items: "All"
-        
