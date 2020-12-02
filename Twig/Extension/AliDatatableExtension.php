@@ -2,12 +2,17 @@
 
 namespace Ali\DatatableBundle\Twig\Extension;
 
+use MongoDB\BSON\UTCDateTime;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Ali\DatatableBundle\Util\Datatable;
+use Symfony\Component\Yaml\Yaml;
+use Twig\Extension\AbstractExtension;
+use Twig\TwigFilter;
+use Twig\TwigFunction;
 
-class AliDatatableExtension extends \Twig_Extension
+class AliDatatableExtension extends AbstractExtension
 {
 
     /** @var \Symfony\Component\DependencyInjection\ContainerInterface */
@@ -29,7 +34,7 @@ class AliDatatableExtension extends \Twig_Extension
     public function getFunctions()
     {
         return array(
-            new \Twig_SimpleFunction('datatable', array($this, 'datatable'), array("is_safe" => array("html")))
+            new TwigFunction('datatable', array($this, 'datatable'), array("is_safe" => array("html")))
         );
     }
 
@@ -41,8 +46,8 @@ class AliDatatableExtension extends \Twig_Extension
     public function getFilters()
     {
         return array(
-            new \Twig_SimpleFilter('mongodate', array($this, 'convertMongoDateFilter')),
-            new \Twig_SimpleFilter('dta_trans', array($this, 'dtatransFilter'))
+            new TwigFilter('mongodate', array($this, 'convertMongoDateFilter')),
+            new TwigFilter('dta_trans', array($this, 'dtatransFilter'))
         );
     }
 
@@ -56,9 +61,11 @@ class AliDatatableExtension extends \Twig_Extension
     public function dtatransFilter($id)
     {
         $translator = $this->_container->get('translator');
-        $callback   = function($id) {
-            $path = $this->_container->get('kernel')->locateResource('@AliDatatableBundle/Resources/translations/messages.en.yml');
-            return \Symfony\Component\Yaml\Yaml::parse(file_get_contents($path))['ali']['common'][explode('.', $id)[2]];
+        $path = $this->_container->get('kernel')->locateResource('@AliDatatableBundle/Resources/translations/messages.en.yml');
+
+        $callback   = function($id) use ($path) {
+            $file =  Yaml::parse(file_get_contents($path));
+            return $file['ali']['common'][explode('.', $id)[2]];
         };
         return $translator->trans($id) === $id ? $callback($id) : $translator->trans($id);
     }
@@ -66,12 +73,12 @@ class AliDatatableExtension extends \Twig_Extension
     /**
      * convert MongoDate to DateTime
      *
-     * @param \MongoDate $mongoDate
+     * @param UTCDateTime $mongoDate
      * @return \DateTime
      */
-    public function convertMongoDateFilter(\MongoDate $mongoDate)
+    public function convertMongoDateFilter(UTCDateTime  $mongoDate)
     {
-        return new \DateTime('@' . $mongoDate->sec);
+        return $mongoDate->toDateTime();
     }
 
     /**

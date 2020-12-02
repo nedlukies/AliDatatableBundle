@@ -5,18 +5,28 @@ services:
     datatable:
         class: "%datatable.class%"
         arguments: ['@service_container']
-        scope: prototype
+        public: true
         calls:
             - [setEntityManager, ['@doctrine.orm.entity_manager']]
-            
+
     datatable.twig.extension:
         class: Ali\DatatableBundle\Twig\Extension\AliDatatableExtension
         arguments: ['@service_container']
         tags:
             -  { name: twig.extension }
-            
+
     datatable.listener:
         class: Ali\DatatableBundle\EventListener\DatatableListener
         arguments: [ '@twig' ]
         tags:
             - { name: kernel.event_listener, event: kernel.response,  method: onKernelResponse, priority: 255 }
+    datatable.query.builder.mongodb:
+        class: Ali\DatatableBundle\Util\Factory\Query\MongodbDoctrineBuilder
+        public: true
+        arguments: ['@doctrine_mongodb.odm.document_manager','@request_stack']
+
+    datatable.query.builder.doctrine:
+        class: Ali\DatatableBundle\Util\Factory\Query\DoctrineBuilder
+        public: true
+        arguments: ['@doctrine.orm.entity_manager','@request_stack']
+

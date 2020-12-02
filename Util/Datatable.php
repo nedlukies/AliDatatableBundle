@@ -2,6 +2,7 @@
 
 namespace Ali\DatatableBundle\Util;
 
+use Ali\DatatableBundle\Util\Factory\Query\MongodbDoctrineBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -115,10 +116,10 @@ class Datatable
         switch ($driver)
         {
             case 'orm':
-                $this->_queryBuilder = new DoctrineBuilder($this->_container);
+                $this->_queryBuilder = $this->_container->get('datatable.query.builder.doctrine');
                 break;
             case 'mongodb':
-                $this->_queryBuilder = new MongodbDoctrineBuilder($this->_container);
+                $this->_queryBuilder = $this->_container->get('datatable.query.builder.mongodb');
                 break;
             default:
                 throw new \Exception(sprintf('Unknown driver [%s], supported drivers are : %s ', $driver, 'orm|mongodb'));
@@ -364,7 +365,7 @@ class Datatable
      */
     public function setEntityManager(EntityManager $em)
     {
-        $this->_queryBuilder = new DoctrineBuilder($this->_container, $em);
+        $this->_queryBuilder = $this->_container->get('datatable.query.builder.doctrine');
         return $this;
     }
 

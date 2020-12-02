@@ -2,16 +2,14 @@
 
 namespace Ali\DatatableBundle\Util\Factory\Query;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ORM\Query;
-use Doctrine\ODM\MongoDB\QueryBuilder;
+use Doctrine\ODM\MongoDB\Query\Builder;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 
 class MongodbDoctrineBuilder implements QueryInterface
 {
-
-    /** @var \Symfony\Component\DependencyInjection\ContainerInterface */
-    protected $container;
 
     /** @var \Doctrine\ODM\MongoDB\DocumentManager */
     protected $dm;
@@ -19,7 +17,7 @@ class MongodbDoctrineBuilder implements QueryInterface
     /** @var \Symfony\Component\HttpFoundation\Request */
     protected $request;
 
-    /** @var \Doctrine\ODM\MongoDB\QueryBuilder */
+    /** @var Builder */
     protected $queryBuilder;
 
     /** @var string */
@@ -54,86 +52,87 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /** @var boolean */
     protected $search = FALSE;
-    
+
         /** @var boolean */
     protected $global_search = FALSE;
-    
+
     /** @var array */
     protected $global_search_fields = array();
-    
+
     /** @var boolean */
     protected $date_filter = FALSE;
-        
+
     /** @var array */
-    
+
     protected $date_filter_fields = array();
-     
+
     /** @var string */
-    
+
     protected $group_by = NULL;
-    
+
     /**
-     * class constructor 
-     * 
-     * @param ContainerInterface $container 
+     * class constructor
+     *
+     * @param DocumentManager $dm
+     * @param RequestStack $request
      */
-    public function __construct(ContainerInterface $container)
+    public function __construct(DocumentManager $dm, RequestStack $request)
     {
-        $this->container    = $container;
-        $this->dm           = $this->container->get('doctrine_mongodb')->getManager();
-        $this->request      = $this->container->get('request');
+
+        $this->dm           = $dm;
+        $this->request      = $request->getCurrentRequest();
         $this->queryBuilder = $this->dm->createQueryBuilder();
     }
 
     /**
      * get the search dql
-     * 
+     *
      * @return string
      */
-    protected function _addSearch(\Doctrine\ODM\MongoDB\Query\Builder $queryBuilder)
+    protected function _addSearch(Builder $queryBuilder)
     {
-        
-        
-                
+
+
+
         if ($this->global_search == TRUE)
         {
             $request       = $this->request;
-            
+
             $search_param = null;
-            
+
             if ($search_params = $request->get("search")) {
                 // DataTables 1.10
-                
+
                 if (isset($search_params['value'])) {
                     $search_param = $search_params['value'];
                 }
             } else {
                 $search_param = $request->get("sSearch") ;
             }
-            
+
             $search_fields = array_values($this->fields);
-          
+
             if ($search_param)
             {
                 $where = $queryBuilder->expr();
-                
-                
-                
+
+
+
                 foreach ($this->global_search_fields as $field) {
-                    
+
                     $fieldlist = explode(' ',trim($search_fields[$field]));
                     $search_field = $fieldlist[0];
-                    
+
                    $where =  $queryBuilder->expr()->field($search_field)->equals(new \MongoRegex('/.*' . $search_param . '.*/i'));
-                    
+
                     $queryBuilder->addOr($where);
-                    
+
                 }
 
-               
-                
+
+
             }
-            
+
         }
     }
 
@@ -157,20 +156,20 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * add join
-     * 
+     *
      * @example:
-     *      ->setJoin( 
-     *              'r.event', 
-     *              'e', 
-     *              \Doctrine\ORM\Query\Expr\Join::INNER_JOIN, 
-     *              'e.name like %test%') 
-     * 
+     *      ->setJoin(
+     *              'r.event',
+     *              'e',
+     *              \Doctrine\ORM\Query\Expr\Join::INNER_JOIN,
+     *              'e.name like %test%')
+     *
      * @param string $join_field
      * @param string $alias
      * @param string $type
      * @param string $cond
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function addJoin($join_field, $alias, $type = Join::INNER_JOIN, $cond = '')
     {
@@ -179,15 +178,15 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get total records
-     * 
-     * @return integer 
+     *
+     * @return integer
      */
     public function getTotalRecords()
     {
         $qb = clone $this->queryBuilder;
-        
+
         $this->_addSearch($qb);
-        
+
         //$this->_addSearch($qb);
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
@@ -197,17 +196,12 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get data
-     * 
-     * @param int $hydration_mode
-     * 
-     * @return array 
+     *
+     * @return array
      */
-    public function getData($hydration_mode)
+    public function getData()
     {
-        if ($hydration_mode !== Query::HYDRATE_ARRAY)
-        {
-            throw new \Exception(sprintf('Only array hydration mode is support for datatable'));
-        }
+
         $request     = $this->request;
         $dql_fields  = array_values($this->fields);
         $order_field = null;
@@ -256,7 +250,7 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get entity name
-     * 
+     *
      * @return string
      */
     public function getEntityName()
@@ -266,7 +260,7 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get entity alias
-     * 
+     *
      * @return string
      */
     public function getEntityAlias()
@@ -276,7 +270,7 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get fields
-     * 
+     *
      * @return array
      */
     public function getFields()
@@ -296,7 +290,7 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get order type
-     * 
+     *
      * @return string
      */
     public function getOrderType()
@@ -306,7 +300,7 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * get doctrine query builder
-     * 
+     *
      * @return \Doctrine\ODM\MongoDB\QueryBuilder
      */
     public function getDoctrineQueryBuilder()
@@ -316,11 +310,11 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set entity
-     * 
+     *
      * @param type $entity_name
      * @param type $entity_alias
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setEntity($entity_name, $entity_alias)
     {
@@ -332,10 +326,10 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set fields
-     * 
+     *
      * @param array $fields
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setFields(array $fields)
     {
@@ -345,11 +339,11 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set order
-     * 
+     *
      * @param type $order_field
      * @param type $order_type
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setOrder($order_field, $order_type)
     {
@@ -360,10 +354,10 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set fixed data
-     * 
+     *
      * @param type $data
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setFixedData($data)
     {
@@ -373,11 +367,11 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set query where
-     * 
+     *
      * @param string $where
      * @param array  $params
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setWhere($where, array $params = array())
     {
@@ -386,10 +380,10 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set query group
-     * 
+     *
      * @param string $group
-     * 
-     * @return Datatable 
+     *
+     * @return Datatable
      */
     public function setGroupBy($group)
     {
@@ -398,9 +392,9 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set search
-     * 
+     *
      * @param bool $search
-     * 
+     *
      * @return Datatable
      */
     public function setSearch($search)
@@ -411,10 +405,10 @@ class MongodbDoctrineBuilder implements QueryInterface
 
     /**
      * set doctrine query builder
-     * 
+     *
      * @param \Doctrine\ODM\MongoDB\QueryBuilder $queryBuilder
-     * 
-     * @return DoctrineBuilder 
+     *
+     * @return DoctrineBuilder
      */
     public function setDoctrineQueryBuilder(\Doctrine\ODM\MongoDB\QueryBuilder $queryBuilder)
     {
@@ -423,24 +417,24 @@ class MongodbDoctrineBuilder implements QueryInterface
     }
 
     public function setDateFilter($date_filter) {
-        
+
     }
 
     public function setDateFilterFields($date_filter_fields) {
-        
+
     }
 
     public function setGlobalSearch($global_search) {
         $this->global_search = $global_search;
         return $this;
-        
+
     }
 
     public function setGlobalSearchFields($global_search_fields) {
         $this->global_search_fields = $global_search_fields;
         return $this;
-        
+
     }
-    
-   
+
+
 }

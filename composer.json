@@ -14,14 +14,17 @@
     ],
     "require": {
         "php": "~5.3|~7.0",
-        "twig/twig": ">=1.8,<2.0-dev",
+        "twig/twig": "^2",
         "doctrine/orm": "~2.3",
-        "doctrine/doctrine-bundle": "~1.0"
+        "doctrine/doctrine-bundle": "~1.0",
+        "doctrine/mongodb-odm": "^2.0",
+        "doctrine/mongodb-odm-bundle": "^4.0",
+        "ext-mongodb": "*"
     },
     "target-dir": "Ali/DatatableBundle",
     "autoload": {
         "psr-0": {
-            "Ali\\DatatableBundle": ""
+            "Ali\\DatatableBundle": "./"
         }
     }
 }

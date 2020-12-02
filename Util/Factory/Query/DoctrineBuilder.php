@@ -2,17 +2,15 @@
 
 namespace Ali\DatatableBundle\Util\Factory\Query;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr\Join;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class DoctrineBuilder implements QueryInterface
 {
-
-    /** @var \Symfony\Component\DependencyInjection\ContainerInterface */
-    protected $container;
 
     /** @var \Doctrine\ORM\EntityManager */
     protected $em;
@@ -79,13 +77,13 @@ class DoctrineBuilder implements QueryInterface
     /**
      * class constructor
      *
-     * @param ContainerInterface $container
+     * @param EntityManagerInterface $em
+     * @param RequestStack $request
      */
-    public function __construct(ContainerInterface $container, $em)
+    public function __construct(EntityManagerInterface $em, RequestStack $request)
     {
-        $this->container    = $container;
         $this->em           = $em;
-        $this->request      = Request::createFromGlobals();
+        $this->request      = $request->getCurrentRequest();
         $this->queryBuilder = $this->em->createQueryBuilder();
     }
 
@@ -248,6 +246,7 @@ class DoctrineBuilder implements QueryInterface
         $qb->resetDQLPart('orderBy');
 
         $gb = $qb->getDQLPart('groupBy');
+
         if (empty($gb) || !in_array($this->fields['_identifier_'], $gb))
         {
             $qb->select(" count({$this->fields['_identifier_']}) ");
