@@ -124,7 +124,7 @@ class MongodbDoctrineBuilder implements QueryInterface
                     $fieldlist = explode(' ',trim($search_fields[$field]));
                     $search_field = $fieldlist[0];
 
-                   $where =  $queryBuilder->expr()->field($search_field)->equals(new Regex('/.*' . $search_param . '.*/i'));
+                   $where =  $queryBuilder->expr()->field($search_field)->equals(new Regex( $search_param,'i'));
 
                     $queryBuilder->addOr($where);
 
