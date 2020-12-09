@@ -5,6 +5,7 @@ namespace Ali\DatatableBundle\Util\Factory\Query;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ORM\Query;
 use Doctrine\ODM\MongoDB\Query\Builder;
+use MongoDB\BSON\Regex;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 
@@ -123,7 +124,7 @@ class MongodbDoctrineBuilder implements QueryInterface
                     $fieldlist = explode(' ',trim($search_fields[$field]));
                     $search_field = $fieldlist[0];
 
-                   $where =  $queryBuilder->expr()->field($search_field)->equals(new \MongoRegex('/.*' . $search_param . '.*/i'));
+                   $where =  $queryBuilder->expr()->field($search_field)->equals(new Regex('/.*' . $search_param . '.*/i'));
 
                     $queryBuilder->addOr($where);
 
